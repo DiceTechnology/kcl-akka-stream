@@ -18,11 +18,17 @@ import scala.concurrent.duration.FiniteDuration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
+import software.amazon.kinesis.coordinator.Scheduler;
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
+import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 public class Examples {
 
     //#init-client
-    final AmazonKinesisAsync amazonKinesisAsync = AmazonKinesisAsyncClientBuilder.defaultClient();
+    final KinesisAsyncClient amazonKinesisAsync =
+        KinesisAsyncClient.builder().region(Region.AWS_GLOBAL).build()
     //#init-client
 
     //#init-system
@@ -33,16 +39,15 @@ public class Examples {
     //#worker-settings
     final KinesisWorkerSource.WorkerBuilder workerBuilder = new KinesisWorkerSource.WorkerBuilder() {
         @Override
-        public Worker build(IRecordProcessorFactory recordProcessorFactory) {
-            return new Worker.Builder()
+        public Scheduler build(ShardRecordProcessorFactory recordProcessorFactory) {
+            return new Scheduler()
                     .recordProcessorFactory(recordProcessorFactory)
                     .config(new KinesisClientLibConfiguration(
                             "myApp",
                             "myStreamName",
                             DefaultAWSCredentialsProviderChain.getInstance(),
                             "workerId"
-                    ))
-                    .build();
+                    ));
         }
     };
     final KinesisWorkerSourceSettings workerSettings = KinesisWorkerSourceSettings.create(
@@ -52,12 +57,14 @@ public class Examples {
 
     //#worker-source
     final Executor workerExecutor = Executors.newFixedThreadPool(100);
-    final Source<CommittableRecord, Worker> workerSource = KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor );
+    final Source<CommittableRecord, Scheduler> workerSource =
+        KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor );
     //#worker-source
 
     //#checkpoint
     final KinesisWorkerCheckpointSettings checkpointSettings = KinesisWorkerCheckpointSettings.create(1000, FiniteDuration.apply(30L, TimeUnit.SECONDS));
-    final Flow<CommittableRecord, Record, NotUsed> checkpointFlow = KinesisWorkerSource.checkpointRecordsFlow(checkpointSettings);
+    final Flow<CommittableRecord, KinesisClientRecord, NotUsed> checkpointFlow =
+        KinesisWorkerSource.checkpointRecordsFlow(checkpointSettings);
     //#checkpoint
 
 }
