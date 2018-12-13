@@ -9,20 +9,12 @@ import java.util.concurrent.Executors
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Sink
 import akka.stream.{ActorMaterializer, Materializer}
-import aserralle.akka.stream.kcl.{
-  KinesisWorkerCheckpointSettings,
-  KinesisWorkerSourceSettings
-}
+import aserralle.akka.stream.kcl.{KinesisWorkerCheckpointSettings, KinesisWorkerSourceSettings}
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory
-import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{
-  KinesisClientLibConfiguration,
-  Worker
-}
-import com.amazonaws.services.kinesis.{
-  AmazonKinesisAsync,
-  AmazonKinesisAsyncClientBuilder
-}
+import com.amazonaws.services.kinesis.clientlibrary.lib.worker.{KinesisClientLibConfiguration, Worker}
+import com.amazonaws.services.kinesis.{AmazonKinesisAsync, AmazonKinesisAsyncClientBuilder}
+import io.reactivex.Scheduler.Worker
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

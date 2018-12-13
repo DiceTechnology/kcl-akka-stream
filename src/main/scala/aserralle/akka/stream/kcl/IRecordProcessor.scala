@@ -4,7 +4,7 @@
 
 package aserralle.akka.stream.kcl
 
-import software.amazon.kinesis.lifecycle.{ShutdownInput, ShutdownReason}
+import software.amazon.kinesis.lifecycle.ShutdownReason
 import software.amazon.kinesis.lifecycle.events._
 import software.amazon.kinesis.processor.{RecordProcessorCheckpointer, ShardRecordProcessor}
 import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
@@ -23,7 +23,6 @@ private[kcl] class IRecordProcessor(
   private var extendedSequenceNumber: ExtendedSequenceNumber = _
 
   var shutdown: Option[ShutdownReason] = None
-  var latestCheckpointer: Option[RecordProcessorCheckpointer] = None
 
   override def initialize(initializationInput: InitializationInput): Unit = {
     shardId = initializationInput.shardId()
@@ -31,8 +30,6 @@ private[kcl] class IRecordProcessor(
   }
 
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
-    val checkpointer = processRecordsInput.checkpointer
-    latestCheckpointer = Some(checkpointer)
     processRecordsInput.records().asScala.foreach { record =>
       callback(
         new CommittableRecord(
@@ -41,7 +38,7 @@ private[kcl] class IRecordProcessor(
           processRecordsInput.millisBehindLatest(),
           record,
           recordProcessor = this,
-          checkpointer
+          processRecordsInput.checkpointer
         )
       )
     }
@@ -49,23 +46,22 @@ private[kcl] class IRecordProcessor(
 
   override def leaseLost(leaseLostInput: LeaseLostInput): Unit = {}
 
-  override def shardEnded(shardEndedInput: ShardEndedInput): Unit = {}
-
-  override def shutdownRequested(shutdownInput: ShutdownRequestedInput): Unit = {
-
-    // we need to checkpoint, but if we do it immediately any records still
-    // in flight may get lost
-    latestCheckpointer = Some(shutdownInput.checkpointer)
+  override def shardEnded(shardEndedInput: ShardEndedInput): Unit = {
+    manageShutdown(shardEndedInput.checkpointer, ShutdownReason.SHARD_END)
   }
 
-//  override def shutdown(shutdownInput: ShutdownInput): Unit = {
-//    shutdown = Some(shutdownInput.shutdownReason)
-//    shutdownInput.shutdownReason match {
-//      case ShutdownReason.TERMINATE =>
-//        Thread.sleep(terminateStreamGracePeriod.toMillis)
-//      case ShutdownReason.ZOMBIE => ()
-//      case ShutdownReason.REQUESTED => ()
-//    }
-//  }
+  override def shutdownRequested(shutdownInput: ShutdownRequestedInput): Unit = {
+    manageShutdown(shutdownInput.checkpointer, ShutdownReason.REQUESTED)
+  }
+
+  private def manageShutdown(
+      checkpointer: RecordProcessorCheckpointer,
+      shutdownReason: ShutdownReason): Unit = {
+    // We need to checkpoint, but if we do it immediately any records still
+    // in flight may get lost, so we wait for the grace period
+    Thread.sleep(terminateStreamGracePeriod.toMillis)
+    shutdown = Some(shutdownReason)
+    checkpointer.checkpoint()
+  }
 
 }

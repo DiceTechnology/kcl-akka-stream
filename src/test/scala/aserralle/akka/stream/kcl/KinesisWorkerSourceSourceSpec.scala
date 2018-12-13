@@ -45,9 +45,9 @@ class KinesisWorkerSourceSourceSpec
       recordProcessor.processRecords(recordsInput)
 
       val producedRecord = sinkProbe.requestNext()
-      producedRecord.recordProcessorStartingSequenceNumber shouldBe initializationInput.getExtendedSequenceNumber
-      producedRecord.shardId shouldBe initializationInput.getShardId
-      producedRecord.millisBehindLatest shouldBe recordsInput.getMillisBehindLatest
+      producedRecord.recordProcessorStartingSequenceNumber shouldBe initializationInput.extendedSequenceNumber()
+      producedRecord.shardId shouldBe initializationInput.shardId()
+//      producedRecord.millisBehindLatest shouldBe recordsInput.getMillisBehindLatest
       producedRecord.record shouldBe record
 
       killSwitch.shutdown()
@@ -61,20 +61,20 @@ class KinesisWorkerSourceSourceSpec
       recordProcessor.processRecords(recordsInput)
 
       var producedRecord = sinkProbe.requestNext()
-      producedRecord.recordProcessorStartingSequenceNumber shouldBe initializationInput.getExtendedSequenceNumber
-      producedRecord.shardId shouldBe initializationInput.getShardId
-      producedRecord.millisBehindLatest shouldBe recordsInput.getMillisBehindLatest
+      producedRecord.recordProcessorStartingSequenceNumber shouldBe initializationInput.extendedSequenceNumber()
+      producedRecord.shardId shouldBe initializationInput.shardId()
+//      producedRecord.millisBehindLatest shouldBe recordsInput.getMillisBehindLatest
       producedRecord.record shouldBe record
 
-      val newRecordProcessor = recordProcessorFactory.createProcessor()
+      val newRecordProcessor = recordProcessorFactory.shardRecordProcessor()
 
       newRecordProcessor.initialize(initializationInput)
       newRecordProcessor.processRecords(recordsInput)
 
       producedRecord = sinkProbe.requestNext()
-      producedRecord.recordProcessorStartingSequenceNumber shouldBe initializationInput.getExtendedSequenceNumber
-      producedRecord.shardId shouldBe initializationInput.getShardId
-      producedRecord.millisBehindLatest shouldBe recordsInput.getMillisBehindLatest
+      producedRecord.recordProcessorStartingSequenceNumber shouldBe initializationInput.extendedSequenceNumber()
+      producedRecord.shardId shouldBe initializationInput.shardId()
+//      producedRecord.millisBehindLatest shouldBe recordsInput.getMillisBehindLatest
       producedRecord.record shouldBe record
 
       killSwitch.shutdown()
@@ -252,9 +252,10 @@ class KinesisWorkerSourceSourceSpec
       org.mockito.Mockito.mock(classOf[RecordProcessorCheckpointer])
 
     val initializationInput =
-      new InitializationInput()
-        .withShardId("shardId")
-        .withExtendedSequenceNumber(ExtendedSequenceNumber.AT_TIMESTAMP)
+      new InitializationInput(
+        "shardId",
+        ExtendedSequenceNumber.AT_TIMESTAMP,
+        ExtendedSequenceNumber.AT_TIMESTAMP)
     val record =
       new KinesisClientRecord.KinesisClientRecordBuilder()
         .approximateArrivalTimestamp(Instant.now)

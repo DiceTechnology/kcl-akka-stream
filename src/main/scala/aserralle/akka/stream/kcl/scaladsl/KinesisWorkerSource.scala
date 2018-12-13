@@ -10,8 +10,16 @@ import akka.stream.Supervision.{Resume, Stop}
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Keep, Sink, Source, Zip}
 import akka.{Done, NotUsed}
-import aserralle.akka.stream.kcl.Errors.{BackpressureTimeout, WorkerUnexpectedShutdown}
-import aserralle.akka.stream.kcl.{CommittableRecord, IRecordProcessor, KinesisWorkerCheckpointSettings, KinesisWorkerSourceSettings}
+import aserralle.akka.stream.kcl.Errors.{
+  BackpressureTimeout,
+  WorkerUnexpectedShutdown
+}
+import aserralle.akka.stream.kcl.{
+  CommittableRecord,
+  IRecordProcessor,
+  KinesisWorkerCheckpointSettings,
+  KinesisWorkerSourceSettings
+}
 import software.amazon.kinesis.coordinator.Scheduler
 import software.amazon.kinesis.exceptions.ShutdownException
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory
@@ -38,16 +46,17 @@ object KinesisWorkerSource {
         case (queue, watch) =>
           val semaphore = new Semaphore(1, true)
           val worker = workerBuilder(
-            () => new IRecordProcessor(
-              record => {
-                semaphore.acquire(1)
-                (Exception.nonFatalCatch either Await.result(
-                  queue.offer(record),
-                  settings.backpressureTimeout) left)
+            () =>
+              new IRecordProcessor(
+                record => {
+                  semaphore.acquire(1)
+                  (Exception.nonFatalCatch either Await.result(
+                    queue.offer(record),
+                    settings.backpressureTimeout) left)
                     .foreach(err => queue.fail(BackpressureTimeout(err)))
-                semaphore.release()
-              },
-              settings.terminateStreamGracePeriod
+                  semaphore.release()
+                },
+                settings.terminateStreamGracePeriod
             )
           )
 
