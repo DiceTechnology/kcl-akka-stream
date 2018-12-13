@@ -26,11 +26,11 @@ trait DefaultTestContext
   implicit protected val executionContext =
     ExecutionContext.fromExecutor(threadPool)
 
-  implicit protected val amazonKinesisAsync: AmazonKinesisAsync =
-    mock[AmazonKinesisAsync]
+//  implicit protected val amazonKinesisAsync: AmazonKinesisAsync =
+//    mock[AmazonKinesisAsync]
 
-  override protected def beforeEach(): Unit =
-    reset(amazonKinesisAsync)
+//  override protected def beforeEach(): Unit =
+//    reset(amazonKinesisAsync)
 
   override protected def afterAll(): Unit = {
     Await.ready(system.terminate(), 5.seconds)
