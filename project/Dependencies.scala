@@ -22,7 +22,8 @@ object Dependencies {
   val Kinesis = Seq(
     libraryDependencies ++= Seq(
       "software.amazon.awssdk" % "kinesis" % AwsSdkVersion % Provided, // Amazon Software License
-      "software.amazon.awssdk" % "core" % AwsSdkVersion % Provided, // Amazon Software License
+      "software.amazon.awssdk" % "dynamodb" % AwsSdkVersion % Provided, // Amazon Software License
+      "software.amazon.awssdk" % "cloudwatch" % AwsSdkVersion % Provided, // Amazon Software License
       "software.amazon.kinesis" % "amazon-kinesis-client" % "2.0.5" % Provided, // Amazon Software License
       "org.mockito" % "mockito-core" % "2.7.11" % Test // MIT
     )
