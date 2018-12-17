@@ -23,28 +23,29 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-object Examples extends App{
+object Examples {
 
   //#init-system
   implicit val system: ActorSystem = ActorSystem()
   implicit val materializer: Materializer = ActorMaterializer()
   //#init-system
 
-  /*#init-clients*/
-  val region: Region = Region.AWS_GLOBAL
+  //#init-clients
+  val region: Region = Region.EU_WEST_1
   val kinesisClient: KinesisAsyncClient = KinesisAsyncClient.builder.region(region).build
   val dynamoClient: DynamoDbAsyncClient = DynamoDbAsyncClient.builder.region(region).build
   val cloudWatchClient: CloudWatchAsyncClient = CloudWatchAsyncClient.builder.region(region).build
-  //#init-client
+  //#init-clients
 
   //#worker-settings
   val workerSourceSettings = KinesisWorkerSourceSettings(
     bufferSize = 1000,
     terminateStreamGracePeriod = 1 minute,
-    backpressureTimeout = 1.minute)
+    backpressureTimeout = 1 minute)
 
-  val configsBuilderPartial: ShardRecordProcessorFactory ⇒ ConfigsBuilder =
-    new ConfigsBuilder(
+  val builder: ShardRecordProcessorFactory => Scheduler = recordProcessorFactory => {
+
+    val configBuilder = new ConfigsBuilder(
       "myStreamName",
       "myApp",
       kinesisClient,
@@ -54,10 +55,8 @@ object Examples extends App{
         import scala.sys.process._
         "hostname".!!.trim()
       }:${UUID.randomUUID()}",
-      _)
+      recordProcessorFactory)
 
-  val builder: ShardRecordProcessorFactory => Scheduler = recordProcessorFactory => {
-    val configBuilder = configsBuilderPartial.apply(recordProcessorFactory)
     new Scheduler(
       configBuilder.checkpointConfig,
       configBuilder.coordinatorConfig,

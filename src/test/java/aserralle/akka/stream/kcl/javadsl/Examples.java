@@ -80,7 +80,8 @@ public class Examples {
     //#worker-source
 
     //#checkpoint
-    final KinesisWorkerCheckpointSettings checkpointSettings = KinesisWorkerCheckpointSettings.create(1000, FiniteDuration.apply(30L, TimeUnit.SECONDS));
+    final KinesisWorkerCheckpointSettings checkpointSettings =
+            KinesisWorkerCheckpointSettings.create(1000, FiniteDuration.apply(30L, TimeUnit.SECONDS));
     final Flow<CommittableRecord, KinesisClientRecord, NotUsed> checkpointFlow =
         KinesisWorkerSource.checkpointRecordsFlow(checkpointSettings);
     //#checkpoint
