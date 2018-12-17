@@ -15,15 +15,17 @@ object Dependencies {
       "com.typesafe.akka" %% "akka-stream-testkit" % AkkaVersion % Test,
       "org.scalatest" %% "scalatest" % "3.0.1" % Test, // ApacheV2
       "com.novocode" % "junit-interface" % "0.11" % Test, // BSD-style
+      "org.slf4j" % "slf4j-api" % "1.7.22",
+      "ch.qos.logback" % "logback-classic" % "1.1.9",
       "junit" % "junit" % "4.12" % Test // Eclipse Public License 1.0
     )
   )
 
   val Kinesis = Seq(
     libraryDependencies ++= Seq(
-      "software.amazon.awssdk" % "kinesis" % AwsSdkVersion % Provided, // Amazon Software License
-      "software.amazon.awssdk" % "dynamodb" % AwsSdkVersion % Provided, // Amazon Software License
-      "software.amazon.awssdk" % "cloudwatch" % AwsSdkVersion % Provided, // Amazon Software License
+      "software.amazon.awssdk" % "kinesis" % AwsSdkVersion % Provided, // ApacheV2
+      "software.amazon.awssdk" % "dynamodb" % AwsSdkVersion % Provided, // ApacheV2
+      "software.amazon.awssdk" % "cloudwatch" % AwsSdkVersion % Provided, // ApacheV2
       "software.amazon.kinesis" % "amazon-kinesis-client" % "2.0.5" % Provided, // Amazon Software License
       "org.mockito" % "mockito-core" % "2.7.11" % Test // MIT
     )
