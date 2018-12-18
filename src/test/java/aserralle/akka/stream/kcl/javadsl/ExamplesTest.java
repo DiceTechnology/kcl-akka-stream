@@ -7,10 +7,10 @@ package aserralle.akka.stream.kcl.javadsl;
 import akka.actor.ActorSystem;
 import akka.stream.ActorMaterializer;
 import akka.stream.javadsl.Flow;
+import akka.stream.javadsl.Sink;
 import aserralle.akka.stream.kcl.CommittableRecord;
 import aserralle.akka.stream.kcl.KinesisWorkerCheckpointSettings;
 import aserralle.akka.stream.kcl.KinesisWorkerSourceSettings;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -27,8 +27,6 @@ import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 public class ExamplesTest {
 
     public static void main(String[] args) {
-
-      ObjectMapper mapper = new ObjectMapper();
 
         //#init-client
         Region region = Region.EU_WEST_1;
@@ -85,7 +83,7 @@ public class ExamplesTest {
 
         final KinesisWorkerSourceSettings workerSettings = KinesisWorkerSourceSettings.create(
             1000,
-            FiniteDuration.apply(1L, TimeUnit.SECONDS),
+            FiniteDuration.apply(10L, TimeUnit.SECONDS),
             FiniteDuration.apply(1L, TimeUnit.MINUTES));
         //#worker-settings
 
@@ -106,11 +104,13 @@ public class ExamplesTest {
     final Executor workerExecutor = Executors.newFixedThreadPool(100);
 
       KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
-          .via(Flow.<CommittableRecord>create().map(param -> {
-              System.out.println(new String(param.record().data().array()));
-              return param;
+          .to(
+                  Sink.<CommittableRecord>foreach(param -> {
+//                  Flow.<CommittableRecord>create().map(param -> {
+              System.out.println("Got: " + new String(param.record().data().array()));
+//              return param;
           }))
-        .to(KinesisWorkerSource.checkpointRecordsSink(checkpointSettings))
+//        .to(KinesisWorkerSource.checkpointRecordsSink(checkpointSettings))
         .run(materializer);
 
 

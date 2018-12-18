@@ -10,16 +10,9 @@ import akka.stream.Supervision.{Resume, Stop}
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Keep, Sink, Source, Zip}
 import akka.{Done, NotUsed}
-import aserralle.akka.stream.kcl.Errors.{
-  BackpressureTimeout,
-  WorkerUnexpectedShutdown
-}
-import aserralle.akka.stream.kcl.{
-  CommittableRecord,
-  IRecordProcessor,
-  KinesisWorkerCheckpointSettings,
-  KinesisWorkerSourceSettings
-}
+import aserralle.akka.stream.kcl.Errors.{BackpressureTimeout, WorkerUnexpectedShutdown}
+import aserralle.akka.stream.kcl.{CommittableRecord, IRecordProcessor, KinesisWorkerCheckpointSettings, KinesisWorkerSourceSettings}
+import org.checkerframework.checker.units.qual.s
 import software.amazon.kinesis.coordinator.Scheduler
 import software.amazon.kinesis.exceptions.ShutdownException
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory
@@ -62,10 +55,17 @@ object KinesisWorkerSource {
 
           Future(worker.run()).onComplete {
             case Failure(ex) =>
+              println("failed " + ex)
               queue.fail(WorkerUnexpectedShutdown(ex))
-            case Success(_) => queue.complete()
+            case Success(_) =>
+
+              println("success and done ")
+              queue.complete()
           }
-          watch.onComplete(_ => Future(worker.shutdown()))
+          watch.onComplete(s => {
+            println("shutting down " + s)
+            Future(worker.shutdown())
+          })
           worker
       }
 
