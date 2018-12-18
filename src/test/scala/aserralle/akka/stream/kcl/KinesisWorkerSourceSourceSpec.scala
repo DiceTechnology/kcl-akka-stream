@@ -284,7 +284,7 @@ class KinesisWorkerSourceSourceSpec
   "KinesisWorker checkpoint Flow " must {
 
     "checkpoint batch of records with same sequence number" in new KinesisWorkerCheckpointContext {
-      val recordProcessor = new IRecordProcessor(_ => (), 1.second)
+      val recordProcessor = new ShardProcessor(_ => (), 1.second)
 
       val checkpointerShard1 =
         org.mockito.Mockito.mock(classOf[RecordProcessorCheckpointer])
@@ -316,7 +316,7 @@ class KinesisWorkerSourceSourceSpec
     }
 
     "checkpoint batch of records of different shards" in new KinesisWorkerCheckpointContext {
-      val recordProcessor = new IRecordProcessor(_ => (), 1.second)
+      val recordProcessor = new ShardProcessor(_ => (), 1.second)
 
       val checkpointerShard1 =
         org.mockito.Mockito.mock(classOf[RecordProcessorCheckpointer])
@@ -369,7 +369,7 @@ class KinesisWorkerSourceSourceSpec
     }
 
     "not checkpoint the batch if the IRecordProcessor has been shutdown" in new KinesisWorkerCheckpointContext {
-      val recordProcessor = new IRecordProcessor(_ => (), 1.second)
+      val recordProcessor = new ShardProcessor(_ => (), 1.second)
       recordProcessor.shutdownRequested(
         ShutdownRequestedInput.builder().checkpointer(org.mockito.Mockito.mock(classOf[RecordProcessorCheckpointer])).build())
 
@@ -392,7 +392,7 @@ class KinesisWorkerSourceSourceSpec
     }
 
     "fail with Exception if checkpoint action fails" in new KinesisWorkerCheckpointContext {
-      val recordProcessor = new IRecordProcessor(_ => (), 1.second)
+      val recordProcessor = new ShardProcessor(_ => (), 1.second)
       val record = org.mockito.Mockito.mock(classOf[KinesisClientRecord])
       when(record.sequenceNumber).thenReturn("1")
       val checkpointer =

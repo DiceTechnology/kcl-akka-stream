@@ -4,6 +4,7 @@
 
 package aserralle.akka.stream.kcl.javadsl;
 
+import akka.Done;
 import akka.actor.ActorSystem;
 import akka.stream.ActorMaterializer;
 import akka.stream.javadsl.Flow;
@@ -11,10 +12,13 @@ import akka.stream.javadsl.Sink;
 import aserralle.akka.stream.kcl.CommittableRecord;
 import aserralle.akka.stream.kcl.KinesisWorkerCheckpointSettings;
 import aserralle.akka.stream.kcl.KinesisWorkerSourceSettings;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import scala.Function1;
 import scala.concurrent.duration.FiniteDuration;
+import scala.util.Try;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
@@ -66,7 +70,7 @@ public class ExamplesTest {
                         kinesisClient,
                         dynamoClient,
                         cloudWatchClient,
-                        "workerId",
+                        "shardWorker-" + UUID.randomUUID(),
                         recordProcessorFactory);
 
                 return new Scheduler(
@@ -103,16 +107,20 @@ public class ExamplesTest {
 
     final Executor workerExecutor = Executors.newFixedThreadPool(100);
 
-      KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
-          .to(
-                  Sink.<CommittableRecord>foreach(param -> {
-//                  Flow.<CommittableRecord>create().map(param -> {
-              System.out.println("Got: " + new String(param.record().data().array()));
-//              return param;
-          }))
-//        .to(KinesisWorkerSource.checkpointRecordsSink(checkpointSettings))
-        .run(materializer);
 
+      KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
+          .runForeach(cr -> System.out.println("Got " + cr), materializer);
+
+//      KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
+//          .to(
+//                  Sink.<CommittableRecord>foreach(param -> {
+////                  Flow.<CommittableRecord>create().map(param -> {
+//              System.out.println("Got: " + new String(param.record().data().array()));
+//              param.tryToCheckpoint();
+////              return param;
+//          }))
+////        .to(KinesisWorkerSource.checkpointRecordsSink(checkpointSettings))
+//        .run(materializer);
 
 }
     //#checkpoint

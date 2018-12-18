@@ -13,7 +13,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-private[kcl] class IRecordProcessor(
+private[kcl] class ShardProcessor(
     callback: CommittableRecord => Unit,
     terminateStreamGracePeriod: FiniteDuration
 )(implicit executionContext: ExecutionContext)
@@ -30,17 +30,25 @@ private[kcl] class IRecordProcessor(
   }
 
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
+    println(s"Received batch of ${processRecordsInput.records().size()} records")
     processRecordsInput.records().asScala.foreach { record =>
-      callback(
-        new CommittableRecord(
-          shardId,
-          extendedSequenceNumber,
-          processRecordsInput.millisBehindLatest(),
-          record,
-          recordProcessor = this,
-          processRecordsInput.checkpointer
+      println("Got record " + shardId + " " + record)
+      try {
+        callback(
+          new CommittableRecord(
+            shardId,
+            extendedSequenceNumber,
+            processRecordsInput.millisBehindLatest(),
+            record,
+            recordProcessor = this,
+            processRecordsInput.checkpointer
+          )
         )
-      )
+      } catch {
+        case e: Exception =>
+          println("Whoa WTF " + e)
+      }
+      println("Sent record")
     }
   }
 

@@ -11,11 +11,10 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Keep, Sink, Source, Zip}
 import akka.{Done, NotUsed}
 import aserralle.akka.stream.kcl.Errors.{BackpressureTimeout, WorkerUnexpectedShutdown}
-import aserralle.akka.stream.kcl.{CommittableRecord, IRecordProcessor, KinesisWorkerCheckpointSettings, KinesisWorkerSourceSettings}
-import org.checkerframework.checker.units.qual.s
+import aserralle.akka.stream.kcl.{CommittableRecord, KinesisWorkerCheckpointSettings, KinesisWorkerSourceSettings, ShardProcessor}
 import software.amazon.kinesis.coordinator.Scheduler
 import software.amazon.kinesis.exceptions.ShutdownException
-import software.amazon.kinesis.processor.ShardRecordProcessorFactory
+import software.amazon.kinesis.processor.{ShardRecordProcessor, ShardRecordProcessorFactory}
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
 import scala.collection.immutable
@@ -26,31 +25,45 @@ import scala.util.{Failure, Success}
 object KinesisWorkerSource {
 
   def apply(
-      workerBuilder: ShardRecordProcessorFactory => Scheduler,
-      settings: KinesisWorkerSourceSettings =
-        KinesisWorkerSourceSettings.defaultInstance
-  )(implicit workerExecutor: ExecutionContext)
-    : Source[CommittableRecord, Scheduler] =
+             workerBuilder: ShardRecordProcessorFactory => Scheduler,
+             settings: KinesisWorkerSourceSettings =
+             KinesisWorkerSourceSettings.defaultInstance
+           )(implicit workerExecutor: ExecutionContext)
+  : Source[CommittableRecord, Scheduler] =
     Source
       .queue[CommittableRecord](settings.bufferSize,
-                                OverflowStrategy.backpressure)
+      OverflowStrategy.backpressure)
       .watchTermination()(Keep.both)
       .mapMaterializedValue {
         case (queue, watch) =>
           val semaphore = new Semaphore(1, true)
           val worker = workerBuilder(
-            () =>
-              new IRecordProcessor(
+            () => {
+              new ShardProcessor(
                 record => {
                   semaphore.acquire(1)
                   (Exception.nonFatalCatch either Await.result(
-                    queue.offer(record),
+                    {
+                      println("pre-Offering")
+                      val f = queue.offer(record)
+                      println("Offering")
+                      f.onComplete {
+                        case Success(value) =>
+                          println("Added to source queue - " + value)
+                        case Failure(ex) =>
+                          println("Failed to add to source queue")
+                      }
+                      f
+                    },
                     settings.backpressureTimeout) left)
-                    .foreach(err => queue.fail(BackpressureTimeout(err)))
+                    .foreach(err => {
+                      println("Backpressure timeout - " + err)
+                      queue.fail(BackpressureTimeout(err))
+                    })
                   semaphore.release()
                 },
-                settings.terminateStreamGracePeriod
-            )
+                settings.terminateStreamGracePeriod)
+            }
           )
 
           Future(worker.run()).onComplete {
@@ -70,9 +83,9 @@ object KinesisWorkerSource {
       }
 
   def checkpointRecordsFlow(
-      settings: KinesisWorkerCheckpointSettings =
-        KinesisWorkerCheckpointSettings.defaultInstance
-  ): Flow[CommittableRecord, KinesisClientRecord, NotUsed] =
+                             settings: KinesisWorkerCheckpointSettings =
+                             KinesisWorkerCheckpointSettings.defaultInstance
+                           ): Flow[CommittableRecord, KinesisClientRecord, NotUsed] =
     Flow[CommittableRecord]
       .groupBy(MAX_KINESIS_SHARDS, _.shardId)
       .groupedWithin(settings.maxBatchSize, settings.maxBatchWait)
@@ -103,9 +116,9 @@ object KinesisWorkerSource {
       })
 
   def checkpointRecordsSink(
-      settings: KinesisWorkerCheckpointSettings =
-        KinesisWorkerCheckpointSettings.defaultInstance
-  ): Sink[CommittableRecord, NotUsed] =
+                             settings: KinesisWorkerCheckpointSettings =
+                             KinesisWorkerCheckpointSettings.defaultInstance
+                           ): Sink[CommittableRecord, NotUsed] =
     checkpointRecordsFlow(settings).to(Sink.ignore)
 
   // http://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html
