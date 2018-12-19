@@ -27,6 +27,9 @@ import software.amazon.awssdk.services.kinesis.KinesisAsyncClient;
 import software.amazon.kinesis.common.ConfigsBuilder;
 import software.amazon.kinesis.coordinator.Scheduler;
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
+import software.amazon.kinesis.retrieval.RetrievalConfig;
+import software.amazon.kinesis.retrieval.polling.SimpleRecordsFetcherFactory;
+import software.amazon.kinesis.retrieval.polling.SynchronousBlockingRetrievalFactory;
 
 public class ExamplesTest {
 
@@ -63,16 +66,24 @@ public class ExamplesTest {
         final KinesisWorkerSource.WorkerBuilder workerBuilder = new KinesisWorkerSource.WorkerBuilder() {
             @Override
             public Scheduler build(ShardRecordProcessorFactory recordProcessorFactory) {
+                String streamName = "jh-local-stream";
                 ConfigsBuilder configsBuilder =
                     new ConfigsBuilder(
-                        "jh-local-stream",
-                        "jh-app",
+                            streamName,
+                        "jh-app-2",
                         kinesisClient,
                         dynamoClient,
                         cloudWatchClient,
                         "shardWorker-" + UUID.randomUUID(),
                         recordProcessorFactory);
 
+                RetrievalConfig retrievalConfig =
+                        configsBuilder.retrievalConfig().retrievalFactory(
+                                new SynchronousBlockingRetrievalFactory(
+                                        streamName,
+                                        kinesisClient,
+                                        new SimpleRecordsFetcherFactory(),
+                                        1000));
                 return new Scheduler(
                     configsBuilder.checkpointConfig(),
                     configsBuilder.coordinatorConfig(),
@@ -80,7 +91,7 @@ public class ExamplesTest {
                     configsBuilder.lifecycleConfig(),
                     configsBuilder.metricsConfig(),
                     configsBuilder.processorConfig(),
-                    configsBuilder.retrievalConfig()
+                        retrievalConfig
                 );
             }
         };
@@ -109,7 +120,10 @@ public class ExamplesTest {
 
 
       KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
-          .runForeach(cr -> System.out.println("Got " + cr), materializer);
+          .runForeach(cr -> {
+              cr.tryToCheckpoint();
+              System.out.println("Got " + new String(cr.record().data().array()));
+          }, materializer);
 
 //      KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
 //          .to(
