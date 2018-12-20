@@ -6,7 +6,9 @@ package aserralle.akka.stream.kcl.javadsl;
 
 import akka.Done;
 import akka.actor.ActorSystem;
+import akka.event.Logging;
 import akka.stream.ActorMaterializer;
+import akka.stream.Attributes;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Sink;
 import aserralle.akka.stream.kcl.CommittableRecord;
@@ -17,6 +19,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import scala.Function1;
+import scala.annotation.meta.param;
 import scala.concurrent.duration.FiniteDuration;
 import scala.util.Try;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
@@ -119,22 +122,25 @@ public class ExamplesTest {
     final Executor workerExecutor = Executors.newFixedThreadPool(100);
 
 
-      KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
-          .runForeach(cr -> {
-              cr.tryToCheckpoint();
-              System.out.println("Got " + new String(cr.record().data().array()));
-          }, materializer);
-
 //      KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
-//          .to(
-//                  Sink.<CommittableRecord>foreach(param -> {
-////                  Flow.<CommittableRecord>create().map(param -> {
-//              System.out.println("Got: " + new String(param.record().data().array()));
-//              param.tryToCheckpoint();
-////              return param;
-//          }))
-////        .to(KinesisWorkerSource.checkpointRecordsSink(checkpointSettings))
-//        .run(materializer);
+//          .runForeach(cr -> {
+//              cr.tryToCheckpoint();
+//              byte[] barr = new byte[cr.record().data().capacity()];
+//              cr.record().data().get(barr);
+//              System.out.println("Got data: " + new String(barr));
+//
+//          }, materializer);
+
+      KinesisWorkerSource.create(workerBuilder, workerSettings, workerExecutor)
+          .alsoTo(
+                  Sink.foreach(cr -> {
+              byte[] barr = new byte[cr.record().data().capacity()];
+              cr.record().data().get(barr);
+              System.out.println("Got data: " + new String(barr));
+//              return param;
+          }))
+        .to(KinesisWorkerSource.checkpointRecordsSink(checkpointSettings))
+        .run(materializer);
 
 }
     //#checkpoint

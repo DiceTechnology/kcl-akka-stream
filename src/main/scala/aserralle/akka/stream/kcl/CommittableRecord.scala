@@ -11,15 +11,14 @@ import software.amazon.kinesis.retrieval.KinesisClientRecord
 import software.amazon.kinesis.retrieval.kpl.ExtendedSequenceNumber
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 class CommittableRecord(
-                         val shardId: String,
-                         val recordProcessorStartingSequenceNumber: ExtendedSequenceNumber,
-                         val millisBehindLatest: Long,
-                         val record: KinesisClientRecord,
-                         recordProcessor: ShardProcessor,
-                         checkpointer: RecordProcessorCheckpointer
+    val shardId: String,
+    val recordProcessorStartingSequenceNumber: ExtendedSequenceNumber,
+    val millisBehindLatest: Long,
+    val record: KinesisClientRecord,
+    recordProcessor: ShardProcessor,
+    checkpointer: RecordProcessorCheckpointer
 )(implicit executor: ExecutionContext) {
 
   val sequenceNumber: String = record.sequenceNumber()
@@ -31,20 +30,11 @@ class CommittableRecord(
   def canBeCheckpointed(): Boolean =
     recordProcessorShutdownReason().isEmpty
 
-  def tryToCheckpoint(): Future[Done] ={
-
-  val f =
+  def tryToCheckpoint(): Future[Done] =
     Future {
-    checkpointer.checkpoint()
-    Done
-  }
-    f.onComplete {
-      case Success(_) => println("Checkpoint successful")
-      case Failure(ex) => println(s"Checkpoint failed $ex")
+      checkpointer.checkpoint()
+      Done
     }
-  f
-}
-
 }
 
 object CommittableRecord {
@@ -54,5 +44,4 @@ object CommittableRecord {
   // same sequence number but will differ by subsequence number
   implicit val orderBySequenceNumber: Ordering[CommittableRecord] =
     Ordering[(String, Long)].on(cr ⇒ (cr.sequenceNumber, cr.subSequenceNumber))
-
 }

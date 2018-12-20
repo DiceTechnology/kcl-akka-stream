@@ -14,7 +14,7 @@ import aserralle.akka.stream.kcl.Errors.{BackpressureTimeout, WorkerUnexpectedSh
 import aserralle.akka.stream.kcl.{CommittableRecord, KinesisWorkerCheckpointSettings, KinesisWorkerSourceSettings, ShardProcessor}
 import software.amazon.kinesis.coordinator.Scheduler
 import software.amazon.kinesis.exceptions.ShutdownException
-import software.amazon.kinesis.processor.{ShardRecordProcessor, ShardRecordProcessorFactory}
+import software.amazon.kinesis.processor.ShardRecordProcessorFactory
 import software.amazon.kinesis.retrieval.KinesisClientRecord
 
 import scala.collection.immutable
@@ -25,11 +25,11 @@ import scala.util.{Failure, Success}
 object KinesisWorkerSource {
 
   def apply(
-             workerBuilder: ShardRecordProcessorFactory => Scheduler,
-             settings: KinesisWorkerSourceSettings =
-             KinesisWorkerSourceSettings.defaultInstance
-           )(implicit workerExecutor: ExecutionContext)
-  : Source[CommittableRecord, Scheduler] =
+    workerBuilder: ShardRecordProcessorFactory => Scheduler,
+    settings: KinesisWorkerSourceSettings =
+      KinesisWorkerSourceSettings.defaultInstance
+  )(implicit workerExecutor: ExecutionContext)
+    : Source[CommittableRecord, Scheduler] =
     Source
       .queue[CommittableRecord](settings.bufferSize,
       OverflowStrategy.backpressure)
@@ -43,21 +43,9 @@ object KinesisWorkerSource {
                 record => {
                   semaphore.acquire(1)
                   (Exception.nonFatalCatch either Await.result(
-                    {
-                      println("pre-Offering")
-                      val f = queue.offer(record)
-                      println("Offering")
-                      f.onComplete {
-                        case Success(value) =>
-                          println("Added to source queue - " + value)
-                        case Failure(ex) =>
-                          println("Failed to add to source queue")
-                      }
-                      f
-                    },
+                    queue.offer(record),
                     settings.backpressureTimeout) left)
                     .foreach(err => {
-                      println("Backpressure timeout - " + err)
                       queue.fail(BackpressureTimeout(err))
                     })
                   semaphore.release()
@@ -68,24 +56,18 @@ object KinesisWorkerSource {
 
           Future(worker.run()).onComplete {
             case Failure(ex) =>
-              println("failed " + ex)
               queue.fail(WorkerUnexpectedShutdown(ex))
             case Success(_) =>
-
-              println("success and done ")
               queue.complete()
           }
-          watch.onComplete(s => {
-            println("shutting down " + s)
-            Future(worker.shutdown())
-          })
+          watch.onComplete(_ => Future(worker.shutdown()))
           worker
       }
 
   def checkpointRecordsFlow(
-                             settings: KinesisWorkerCheckpointSettings =
-                             KinesisWorkerCheckpointSettings.defaultInstance
-                           ): Flow[CommittableRecord, KinesisClientRecord, NotUsed] =
+    settings: KinesisWorkerCheckpointSettings =
+      KinesisWorkerCheckpointSettings.defaultInstance
+  ): Flow[CommittableRecord, KinesisClientRecord, NotUsed] =
     Flow[CommittableRecord]
       .groupBy(MAX_KINESIS_SHARDS, _.shardId)
       .groupedWithin(settings.maxBatchSize, settings.maxBatchWait)
@@ -116,9 +98,9 @@ object KinesisWorkerSource {
       })
 
   def checkpointRecordsSink(
-                             settings: KinesisWorkerCheckpointSettings =
-                             KinesisWorkerCheckpointSettings.defaultInstance
-                           ): Sink[CommittableRecord, NotUsed] =
+    settings: KinesisWorkerCheckpointSettings =
+      KinesisWorkerCheckpointSettings.defaultInstance
+  ): Sink[CommittableRecord, NotUsed] =
     checkpointRecordsFlow(settings).to(Sink.ignore)
 
   // http://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html

@@ -30,10 +30,7 @@ private[kcl] class ShardProcessor(
   }
 
   override def processRecords(processRecordsInput: ProcessRecordsInput): Unit = {
-    println(s"Received batch of ${processRecordsInput.records().size()} records")
     processRecordsInput.records().asScala.foreach { record =>
-      println("Got record " + shardId + " " + record)
-      try {
         callback(
           new CommittableRecord(
             shardId,
@@ -44,11 +41,6 @@ private[kcl] class ShardProcessor(
             processRecordsInput.checkpointer
           )
         )
-      } catch {
-        case e: Exception =>
-          println("Whoa WTF " + e)
-      }
-      println("Sent record")
     }
   }
 
