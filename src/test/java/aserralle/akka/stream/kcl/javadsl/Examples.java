@@ -9,16 +9,10 @@ import akka.actor.ActorSystem;
 import akka.stream.ActorMaterializer;
 import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Source;
+import aserralle.akka.stream.kcl.CommittableRecord;
 import aserralle.akka.stream.kcl.KinesisWorkerCheckpointSettings;
 import aserralle.akka.stream.kcl.KinesisWorkerSourceSettings;
-import aserralle.akka.stream.kcl.CommittableRecord;
-import io.reactivex.Scheduler.Worker;
 import scala.concurrent.duration.FiniteDuration;
-
-import java.util.UUID;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
@@ -27,6 +21,13 @@ import software.amazon.kinesis.common.ConfigsBuilder;
 import software.amazon.kinesis.coordinator.Scheduler;
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 import software.amazon.kinesis.retrieval.KinesisClientRecord;
+import software.amazon.kinesis.retrieval.RetrievalConfig;
+import software.amazon.kinesis.retrieval.polling.SimpleRecordsFetcherFactory;
+import software.amazon.kinesis.retrieval.polling.SynchronousBlockingRetrievalFactory;
+
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Examples {
 
@@ -46,15 +47,33 @@ public class Examples {
     final KinesisWorkerSource.WorkerBuilder workerBuilder = new KinesisWorkerSource.WorkerBuilder() {
         @Override
         public Scheduler build(ShardRecordProcessorFactory recordProcessorFactory) {
+
+            String streamName = "myStreamName";
+
             ConfigsBuilder configsBuilder =
                     new ConfigsBuilder(
-                            "myStreamName",
+                            streamName,
                             "myApp",
                             kinesisClient,
                             dynamoClient,
                             cloudWatchClient,
                             "workerId",
                             recordProcessorFactory);
+
+            //#Fan-out retrievalConfig - will incur additional AWS costs
+            RetrievalConfig fanoutRetrievalConfig =
+                    configsBuilder.retrievalConfig();
+            //#Fan-out retrievalConfig
+
+            //#Non-fan-out retrievalConfig i.e. equivalent of KCL 1 client
+            RetrievalConfig retrievalConfig =
+                    configsBuilder.retrievalConfig().retrievalFactory(
+                            new SynchronousBlockingRetrievalFactory(
+                                    streamName,
+                                    kinesisClient,
+                                    new SimpleRecordsFetcherFactory(),
+                                    1000));
+            //#Non-fan-out retrievalConfig
 
             return new Scheduler(
                     configsBuilder.checkpointConfig(),
@@ -63,8 +82,7 @@ public class Examples {
                     configsBuilder.lifecycleConfig(),
                     configsBuilder.metricsConfig(),
                     configsBuilder.processorConfig(),
-                    configsBuilder.retrievalConfig()
-            );
+                    retrievalConfig);
         }
     };
 

@@ -18,6 +18,7 @@ import software.amazon.awssdk.services.kinesis.KinesisAsyncClient
 import software.amazon.kinesis.common.ConfigsBuilder
 import software.amazon.kinesis.coordinator.Scheduler
 import software.amazon.kinesis.processor.ShardRecordProcessorFactory
+import software.amazon.kinesis.retrieval.polling.{SimpleRecordsFetcherFactory, SynchronousBlockingRetrievalFactory}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -45,8 +46,10 @@ object Examples {
 
   val builder: ShardRecordProcessorFactory => Scheduler = recordProcessorFactory => {
 
-    val configBuilder = new ConfigsBuilder(
-      "myStreamName",
+    val streamName = "myStreamName"
+
+    val configsBuilder = new ConfigsBuilder(
+      streamName,
       "myApp",
       kinesisClient,
       dynamoClient,
@@ -57,14 +60,30 @@ object Examples {
       }:${UUID.randomUUID()}",
       recordProcessorFactory)
 
+    //#Fan-out retrievalConfig - will incur additional AWS costs
+    val fanoutRetrievalConfig = configsBuilder.retrievalConfig
+    //#Fan-out retrievalConfig
+
+    //#Non-fan-out retrievalConfig i.e. equivalent of KCL 1 client
+    val retrievalConfig =
+      configsBuilder.retrievalConfig
+          .retrievalFactory(
+            new SynchronousBlockingRetrievalFactory(
+              streamName,
+              kinesisClient,
+              new SimpleRecordsFetcherFactory,
+              1000))
+    //#Non-fan-out retrievalConfig
+
+
     new Scheduler(
-      configBuilder.checkpointConfig,
-      configBuilder.coordinatorConfig,
-      configBuilder.leaseManagementConfig,
-      configBuilder.lifecycleConfig,
-      configBuilder.metricsConfig,
-      configBuilder.processorConfig,
-      configBuilder.retrievalConfig)
+      configsBuilder.checkpointConfig,
+      configsBuilder.coordinatorConfig,
+      configsBuilder.leaseManagementConfig,
+      configsBuilder.lifecycleConfig,
+      configsBuilder.metricsConfig,
+      configsBuilder.processorConfig,
+      configsBuilder.retrievalConfig)
   }
   //#worker-settings
 

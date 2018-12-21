@@ -4,24 +4,12 @@
 
 package aserralle.akka.stream.kcl.javadsl;
 
-import akka.Done;
 import akka.actor.ActorSystem;
-import akka.event.Logging;
 import akka.stream.ActorMaterializer;
-import akka.stream.Attributes;
-import akka.stream.javadsl.Flow;
 import akka.stream.javadsl.Sink;
-import aserralle.akka.stream.kcl.CommittableRecord;
 import aserralle.akka.stream.kcl.KinesisWorkerCheckpointSettings;
 import aserralle.akka.stream.kcl.KinesisWorkerSourceSettings;
-import java.util.UUID;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import scala.Function1;
-import scala.annotation.meta.param;
 import scala.concurrent.duration.FiniteDuration;
-import scala.util.Try;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
@@ -33,6 +21,11 @@ import software.amazon.kinesis.processor.ShardRecordProcessorFactory;
 import software.amazon.kinesis.retrieval.RetrievalConfig;
 import software.amazon.kinesis.retrieval.polling.SimpleRecordsFetcherFactory;
 import software.amazon.kinesis.retrieval.polling.SynchronousBlockingRetrievalFactory;
+
+import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class ExamplesTest {
 

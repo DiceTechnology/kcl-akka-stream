@@ -309,7 +309,7 @@ class KinesisWorkerSourceSourceSpec
       for (_ <- 1 to 3) sinkProbe.requestNext()
 
       eventually(verify(checkpointerShard1)
-        .checkpoint(latestRecordShard1.sequenceNumber, latestRecordShard1.subSequenceNumber()))
+        .checkpoint())
 
       sourceProbe.sendComplete()
       sinkProbe.expectComplete()
@@ -359,9 +359,9 @@ class KinesisWorkerSourceSourceSpec
 
       eventually {
         verify(checkpointerShard1)
-          .checkpoint(latestRecordShard1.sequenceNumber(), latestRecordShard1.subSequenceNumber())
+          .checkpoint()
         verify(checkpointerShard2)
-          .checkpoint(latestRecordShard2.sequenceNumber(), latestRecordShard2.subSequenceNumber())
+          .checkpoint()
       }
 
       sourceProbe.sendComplete()
@@ -408,7 +408,7 @@ class KinesisWorkerSourceSourceSpec
       sourceProbe.sendNext(committableRecord)
 
       val failure = new RuntimeException()
-      when(checkpointer.checkpoint(record.sequenceNumber, record.subSequenceNumber())).thenThrow(failure)
+      when(checkpointer.checkpoint()).thenThrow(failure)
 
       sinkProbe.request(1)
 
