@@ -216,7 +216,7 @@ class KinesisWorkerSourceSourceSpec
       val Failure(exception) = watch.value.get
       assert(
         exception.getCause.getMessage
-          .contains("Futures timed out after [100 milliseconds]"))
+          .contains("Future timed out after [100 milliseconds]"))
 
       killSwitch.shutdown()
     }
