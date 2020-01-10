@@ -31,7 +31,7 @@ object Common extends AutoPlugin {
       "-deprecation",
       //"-Xfatal-warnings",
       "-Xlint",
-      "-Yno-adapted-args",
+//      "-Yno-adapted-args",
       "-Ywarn-dead-code",
       "-Xfuture"
     ),

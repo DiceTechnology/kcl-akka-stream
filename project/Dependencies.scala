@@ -14,7 +14,7 @@ object Dependencies {
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-stream" % AkkaVersion % Provided,
       "com.typesafe.akka" %% "akka-stream-testkit" % AkkaVersion % Test,
-      "org.scalatest" %% "scalatest" % "3.0.1" % Test, // ApacheV2
+      "org.scalatest" %% "scalatest" % "3.1.0" % Test, // ApacheV2
       "com.novocode" % "junit-interface" % "0.11" % Test, // BSD-style
       "junit" % "junit" % "4.12" % Test // Eclipse Public License 1.0
     )
