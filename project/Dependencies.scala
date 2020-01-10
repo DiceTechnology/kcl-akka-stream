@@ -2,10 +2,11 @@ import sbt._, Keys._
 
 object Dependencies {
 
-  val AkkaVersion = sys.env.get("AKKA_SERIES") match {
-    case Some("2.5") => "2.5.19"
-    case _ => "2.4.20"
-  }
+  val AkkaVersion = "2.6.1"
+//  sys.env.get("AKKA_SERIES") match {
+//    case Some("2.5") => "2.5.19"
+//    case _ => "2.4.20"
+//  }
 
   val AwsSdkVersion = "2.2.0"
 

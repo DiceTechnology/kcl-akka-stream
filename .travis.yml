@@ -3,6 +3,7 @@ sudo: false
 scala:
 - 2.11.12
 - 2.12.7
+- 2.13.1
 jdk:
 - openjdk8
 script:
